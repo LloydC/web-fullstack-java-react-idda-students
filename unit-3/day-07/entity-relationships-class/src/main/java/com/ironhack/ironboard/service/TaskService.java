@@ -61,8 +61,6 @@ public class TaskService {
     }
 
     // Update approach: virtual method dispatch (no instanceof needed).
-    // Safest approach — works through Hibernate proxies.
-    // Chosen among several valid alternatives for safety and OOP demonstration.
     // Contrast: ProjectService uses instanceof instead.
 
     /**
@@ -71,7 +69,7 @@ public class TaskService {
     public Task fullUpdate(Long id, UpdateTaskRequest request) {
         Task task = findById(id);
 
-        // PUT requires all mandatory fields
+        // mandatory fields
         if (request.getTitle() == null || request.getTitle().isBlank()) {
             throw new IllegalArgumentException("Title is required for full update");
         }
@@ -85,11 +83,11 @@ public class TaskService {
                     "Invalid status: '" + request.getStatus() + "'. Must be one of: TODO, IN_PROGRESS, DONE");
         }
 
-        // Apply ALL base fields (PUT replaces everything)
+        // base fields
         task.setTitle(request.getTitle());
         task.setDescription(request.getDescription());
 
-        // Subclass fields — required for the specific type
+        // subclass fields
         if (task.getType() == TaskType.FEATURE) {
             if (request.getStoryPoints() == null) {
                 throw new IllegalArgumentException(
