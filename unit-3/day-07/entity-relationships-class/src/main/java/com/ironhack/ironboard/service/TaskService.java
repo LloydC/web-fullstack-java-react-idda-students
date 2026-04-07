@@ -1,11 +1,10 @@
 package com.ironhack.ironboard.service;
 
 import com.ironhack.ironboard.dto.request.UpdateTaskRequest;
-import com.ironhack.ironboard.entity.BugTask;
-import com.ironhack.ironboard.entity.FeatureTask;
 import com.ironhack.ironboard.entity.Project;
 import com.ironhack.ironboard.entity.Task;
 import com.ironhack.ironboard.entity.TaskStatus;
+import com.ironhack.ironboard.entity.TaskType;
 import com.ironhack.ironboard.exception.ResourceNotFoundException;
 import com.ironhack.ironboard.repository.TaskRepository;
 import org.springframework.stereotype.Service;
@@ -72,20 +71,38 @@ public class TaskService {
     public Task fullUpdate(Long id, UpdateTaskRequest request) {
         Task task = findById(id);
 
+        // PUT requires all mandatory fields
+        if (request.getTitle() == null || request.getTitle().isBlank()) {
+            throw new IllegalArgumentException("Title is required for full update");
+        }
+        if (request.getStatus() == null) {
+            throw new IllegalArgumentException("Status is required for full update");
+        }
+        try {
+            task.setStatus(TaskStatus.valueOf(request.getStatus()));
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException(
+                    "Invalid status: '" + request.getStatus() + "'. Must be one of: TODO, IN_PROGRESS, DONE");
+        }
+
+        // Apply ALL base fields (PUT replaces everything)
         task.setTitle(request.getTitle());
         task.setDescription(request.getDescription());
 
-        if (request.getStatus() != null) {
-            try {
-                task.setStatus(TaskStatus.valueOf(request.getStatus()));
-            } catch (IllegalArgumentException e) {
+        // Subclass fields — required for the specific type
+        if (task.getType() == TaskType.FEATURE) {
+            if (request.getStoryPoints() == null) {
                 throw new IllegalArgumentException(
-                        "Invalid status: '" + request.getStatus() + "'. Must be one of: TODO, IN_PROGRESS, DONE");
+                        "Story points is required for full update of a FEATURE task");
             }
+            task.setStoryPoints(request.getStoryPoints());
+        } else if (task.getType() == TaskType.BUG) {
+            if (request.getSeverity() == null || request.getSeverity().isBlank()) {
+                throw new IllegalArgumentException(
+                        "Severity is required for full update of a BUG task");
+            }
+            task.setSeverity(request.getSeverity());
         }
-
-        task.setStoryPoints(request.getStoryPoints());
-        task.setSeverity(request.getSeverity());
 
         return taskRepository.save(task);
     }
@@ -112,11 +129,14 @@ public class TaskService {
             }
         }
 
-        if (request.getStoryPoints() != null) {
-            task.setStoryPoints(request.getStoryPoints());
-        }
-        if (request.getSeverity() != null) {
-            task.setSeverity(request.getSeverity());
+        if (task.getType() == TaskType.FEATURE) {
+            if (request.getStoryPoints() != null) {
+                task.setStoryPoints(request.getStoryPoints());
+            }
+        } else if (task.getType() == TaskType.BUG) {
+            if (request.getSeverity() != null) {
+                task.setSeverity(request.getSeverity());
+            }
         }
 
         return taskRepository.save(task);
