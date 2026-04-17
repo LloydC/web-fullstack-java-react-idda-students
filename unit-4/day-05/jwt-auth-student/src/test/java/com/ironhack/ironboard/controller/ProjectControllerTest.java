@@ -89,7 +89,7 @@ class ProjectControllerTest {
     @Test
     void createProject_validRequest_returnsCreated() throws Exception {
         Project created = createTestProject(3L, "New Project", "A brand new project");
-        when(projectService.create(any(Project.class))).thenReturn(created);
+        when(projectService.create(any(Project.class), any(String.class))).thenReturn(created);
 
         String requestBody = """
                 {
